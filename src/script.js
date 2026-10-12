@@ -94,7 +94,37 @@ docsGrid.innerHTML = docs.map(doc => `
 `).join('');
 
     }
+function fuzzyMatch(text, query) {
+    text = String(text || "").toLowerCase();
+    query = query.toLowerCase().trim();
 
+    if (!query) return true;
+    if (text.includes(query)) return true;
+
+    // Allow small spelling mistakes using edit distance
+    let previous = Array.from(
+        { length: query.length + 1 },
+        (_, i) => i
+    );
+
+    for (let i = 1; i <= text.length; i++) {
+        const current = [i];
+
+        for (let j = 1; j <= query.length; j++) {
+            current[j] = Math.min(
+                current[j - 1] + 1,
+                previous[j] + 1,
+                previous[j - 1] +
+                    (text[i - 1] === query[j - 1] ? 0 : 1)
+            );
+        }
+
+        if (current[query.length] <= 1) return true;
+        previous = current;
+    }
+
+    return false;
+}
     // 4. Combined Filter and Search Logic
     function filterAndRender() {
         const searchTerm = searchInput.value.toLowerCase().trim();
@@ -105,9 +135,10 @@ docsGrid.innerHTML = docs.map(doc => `
 
             // Search match (title, description, tags)
             const matchesSearch =
-                doc.title.toLowerCase().includes(searchTerm) ||
-                doc.description.toLowerCase().includes(searchTerm) ||
-                doc.tags.some(tag => tag.toLowerCase().includes(searchTerm));
+    fuzzyMatch(doc.title, searchTerm) ||
+    fuzzyMatch(doc.description, searchTerm) ||
+    (Array.isArray(doc.tags) &&
+        doc.tags.some(tag => fuzzyMatch(tag, searchTerm)));
 
             return matchesCategory && matchesSearch;
         });

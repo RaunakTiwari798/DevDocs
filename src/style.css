@@ -373,3 +373,15 @@ body {
         font-size: 14px;
     }
 }
+.reading-time {
+    display: inline-block;
+    width: fit-content;
+    margin: 8px 0;
+    padding: 4px 10px;
+    background-color: #f6f8fa;
+    color: #57606a;
+    border: 1px solid #d0d7de;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+}

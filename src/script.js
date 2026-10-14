@@ -8,15 +8,30 @@ document.addEventListener('DOMContentLoaded', () => {
     let allDocs = [];
     let currentCategory = 'All';
 
+function calculateReadingTime(markdown) {
+    const text = markdown
+        .replace(/```[\s\S]*?```/g, ' ')
+        .replace(/`[^`]*`/g, ' ')
+        .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+        .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+        .replace(/<[^>]*>/g, ' ');
+
+    const words = text.match(/\b[\w'-]+\b/g) || [];
+    const minutes = Math.max(1, Math.ceil(words.length / 200));
+
+    return `${minutes} min read`;
+}
+
+
     // 1. Fetch the data from data.json
     async function fetchDocs() {
         try {
             // Added cache busting for local dev
             const response = await fetch('data.json?t=' + new Date().getTime());
             if (!response.ok) throw new Error('Failed to fetch data');
-            
+
             allDocs = await response.json();
-            
+
             // Initial Render
             loading.classList.add('hidden');
             setupFilters();
@@ -31,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupFilters() {
         // Extract unique categories
         const categories = ['All', ...new Set(allDocs.map(doc => doc.category))];
-        
+
         filtersContainer.innerHTML = categories.map(cat => `
             <button class="filter-btn ${cat === 'All' ? 'active' : ''}" data-category="${cat}">
                 ${cat}
@@ -45,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Update active state
                 filterBtns.forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
-                
+
                 // Set current category and filter
                 currentCategory = e.target.getAttribute('data-category');
                 filterAndRender();
@@ -62,33 +77,69 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         noResults.classList.add('hidden');
-        
-        docsGrid.innerHTML = docs.map(doc => `
-            <a href="${doc.url}" target="_blank" rel="noopener noreferrer" class="card">
-                <div class="card-category">${doc.category}</div>
-                <h3 class="card-title">${doc.title}</h3>
-                <p class="card-desc">${doc.description}</p>
-                <div class="card-tags">
-                    ${doc.tags.map(tag => `<span class="tag">#${tag}</span>`).join('')}
-                </div>
-            </a>
-        `).join('');
+
+
+docsGrid.innerHTML = docs.map(doc => `
+    <a href="${doc.url}" target="_blank" rel="noopener noreferrer" class="card">
+        <div class="card-category">${doc.category}</div>
+        <h3 class="card-title">${doc.title}</h3>
+        <p class="card-desc">${doc.description}</p>
+        <span class="reading-time">${calculateReadingTime(
+            doc.content || doc.markdown || doc.description || ''
+        )}</span>
+        <div class="card-tags">
+            ${(doc.tags || []).map(tag => `<span class="tag">#${tag}</span>`).join('')}
+        </div>
+    </a>
+`).join('');
+
+    }
+function fuzzyMatch(text, query) {
+    text = String(text || "").toLowerCase();
+    query = query.toLowerCase().trim();
+
+    if (!query) return true;
+    if (text.includes(query)) return true;
+
+    // Allow small spelling mistakes using edit distance
+    let previous = Array.from(
+        { length: query.length + 1 },
+        (_, i) => i
+    );
+
+    for (let i = 1; i <= text.length; i++) {
+        const current = [i];
+
+        for (let j = 1; j <= query.length; j++) {
+            current[j] = Math.min(
+                current[j - 1] + 1,
+                previous[j] + 1,
+                previous[j - 1] +
+                    (text[i - 1] === query[j - 1] ? 0 : 1)
+            );
+        }
+
+        if (current[query.length] <= 1) return true;
+        previous = current;
     }
 
+    return false;
+}
     // 4. Combined Filter and Search Logic
     function filterAndRender() {
         const searchTerm = searchInput.value.toLowerCase().trim();
-        
+
         const filteredDocs = allDocs.filter(doc => {
             // Category match
             const matchesCategory = currentCategory === 'All' || doc.category === currentCategory;
-            
+
             // Search match (title, description, tags)
-            const matchesSearch = 
-                doc.title.toLowerCase().includes(searchTerm) || 
-                doc.description.toLowerCase().includes(searchTerm) ||
-                doc.tags.some(tag => tag.toLowerCase().includes(searchTerm));
-                
+            const matchesSearch =
+    fuzzyMatch(doc.title, searchTerm) ||
+    fuzzyMatch(doc.description, searchTerm) ||
+    (Array.isArray(doc.tags) &&
+        doc.tags.some(tag => fuzzyMatch(tag, searchTerm)));
+
             return matchesCategory && matchesSearch;
         });
 

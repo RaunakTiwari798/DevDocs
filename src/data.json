@@ -47,4 +47,18 @@
       "types"
     ]
   }
+
+  {
+    "id": 5,
+    "title": "Vue.js Getting Started Guide",
+    "description": "Learn Vue.js components, reactive state, conditional rendering, and lists with simple examples.",
+    "url": "documents/frontend/vue-getting-started.md",
+    "category": "Frontend",
+    "tags": [
+      "vue",
+      "javascript",
+      "frontend"
+    ]
+  }
+
 ]

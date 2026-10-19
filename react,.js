@@ -1,18 +1,17 @@
 
-```jsx
+jsx
 function Hello({ name }) {
   return <h1>Hello, {name}</h1>;
 }
-```
 
 
-```jsx
+
+jsx
 const [count, setCount] = useState(0);
-```
 
 
-```jsx
+
+jsx
 useEffect(() => {
   // runs after render
 }, [dependencies]);
-```
